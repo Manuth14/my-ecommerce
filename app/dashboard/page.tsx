@@ -26,7 +26,7 @@ export default async function DashboardPage() {
 
       {/* Products පෙන්නන Grid එක */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {productList.map((product) => (
+        {productList.map((product: any) => (
           <div key={product.id} className="border p-5 rounded-xl shadow-lg hover:shadow-xl transition">
             <h2 className="text-xl font-semibold text-green-700">{product.name}</h2>
             <p className="text-gray-600 mt-2">{product.description}</p>
