@@ -6,16 +6,19 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { signIn as authSignIn, signOut as authSignOut } from "@/lib/auth";
+// NextAuth v5 වලදී AuthError සාමාන්‍යයෙන් පහත ලෙසයි import වෙන්නේ
+// @ts-ignore
+import { AuthError } from "next-auth";
 
+// 1. SignUp Action
 async function signUp(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const name = formData.get("name") as string;
 
-  // 1. Password එක Hash කිරීම
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // 2. Database එකට insert කිරීම
   try {
     await db.insert(users).values({
       email,
@@ -29,9 +32,7 @@ async function signUp(formData: FormData) {
   }
 }
 
-import { signIn as authSignIn } from "@/lib/auth";
-import { AuthError } from "next-auth";
-
+// 2. SignIn Action
 async function signIn(prevState: any, formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
@@ -42,22 +43,29 @@ async function signIn(prevState: any, formData: FormData) {
       password,
       redirectTo: "/dashboard",
     });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      switch (error.type) {
+  } catch (error: unknown) {
+    // Auth.js redirect එකක් දෙනවා නම් ඒක error එකක් විදියට පේන්න පුළුවන්,
+    // ඒ නිසා RedirectError ද බැලිය යුතුයි.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "type" in error
+    ) {
+      const authError = error as AuthError;
+      switch (authError.type) {
         case "CredentialsSignin":
           return { error: "Email හෝ Password වැරදියි!" };
         default:
           return { error: "යම් දෝෂයක් සිදුවුණා, නැවත උත්සාහ කරන්න." };
       }
     }
-    // Auth.js විසින්ම කරන redirect එක catch වෙන්න පුළුවන්, ඒ නිසා මේක අත්‍යවශ්‍යයි
-    throw error; 
+
+    // Redirect එකක් නම් throw කරන්න ඕනේ, නැත්නම් error එකක් විදියට පේනවා
+    throw error;
   }
 }
 
-import { signOut as authSignOut } from "@/lib/auth";
-
+// 3. Logout Action
 async function logoutAction() {
   await authSignOut({ redirectTo: "/login" });
 }
