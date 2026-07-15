@@ -6,9 +6,10 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { users } from "./schema";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+// 1. configuration එක වෙනම constant එකක ගොඩනගන්න
+const authOptions = {
   adapter: DrizzleAdapter(db),
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt" as const },
   providers: [
     Credentials({
       credentials: {
@@ -36,18 +37,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: { 
     signIn: "/login" 
   },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) token.id = user.id;
-      return token;
-    },
-    async session({ session, token }) {
-      // මෙතන තමයි කලින් error එක ආවේ. 
-      // session.user.id එක අනිවාර්යයෙන්ම string එකක් බව සහතික කරනවා.
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
-      }
-      return session;
-    },
+  // lib/auth.ts (callbacks section eka)
+
+callbacks: {
+  async jwt({ token, user }: { token: any; user?: any }) {
+    if (user) token.id = user.id;
+    return token;
   },
-});
+  async session({ session, token }: { session: any; token: any }) {
+    if (session.user && token.id) {
+      session.user.id = token.id as string;
+    }
+    return session;
+  },
+},
+};
+
+// 2. NextAuth initialize කර පසුව export කරන්න
+const nextAuthInstance = NextAuth(authOptions);
+
+export const { handlers, signIn, signOut, auth } = nextAuthInstance;
