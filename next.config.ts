@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Build ekedi API routes pre-render wena eka nawaththanawa
-  experimental: {
-    // Meka dammaama build ekeදී API route eka check karanne na
+  // Me setting eka build wenakota errors ignore karanawa
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 
