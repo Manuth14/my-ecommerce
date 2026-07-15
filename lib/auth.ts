@@ -1,3 +1,4 @@
+// lib/auth.ts
 import NextAuth from "next-auth";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "./db";
@@ -6,7 +7,6 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { users } from "./schema";
 
-// 1. configuration එක වෙනම constant එකක ගොඩනගන්න
 const authOptions = {
   adapter: DrizzleAdapter(db),
   session: { strategy: "jwt" as const },
@@ -18,42 +18,27 @@ const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-
-        const email = credentials.email as string;
-        const password = credentials.password as string;
-
-        const [user] = await db.select().from(users).where(eq(users.email, email));
-
+        const [user] = await db.select().from(users).where(eq(users.email, credentials.email as string));
         if (!user || !user.password) return null;
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        
-        if (!isMatch) return null;
-
-        return { id: user.id, email: user.email, name: user.name };
+        const isMatch = await bcrypt.compare(credentials.password as string, user.password);
+        return isMatch ? { id: user.id, email: user.email, name: user.name } : null;
       },
     }),
   ],
-  pages: { 
-    signIn: "/login" 
+  pages: { signIn: "/login" },
+  callbacks: {
+    async jwt({ token, user }: any) {
+      if (user) token.id = user.id;
+      return token;
+    },
+    async session({ session, token }: any) {
+      if (session.user && token.id) session.user.id = token.id as string;
+      return session;
+    },
   },
-  // lib/auth.ts (callbacks section eka)
-
-callbacks: {
-  async jwt({ token, user }: { token: any; user?: any }) {
-    if (user) token.id = user.id;
-    return token;
-  },
-  async session({ session, token }: { session: any; token: any }) {
-    if (session.user && token.id) {
-      session.user.id = token.id as string;
-    }
-    return session;
-  },
-},
 };
 
-// 2. NextAuth initialize කර පසුව export කරන්න
-const nextAuthInstance = NextAuth(authOptions);
+// මේ විදියට වෙනස් කරන්න:
+const { handlers, signIn, signOut, auth } = NextAuth(authOptions);
 
-export const { handlers, signIn, signOut, auth } = nextAuthInstance;
+export { handlers, signIn, signOut, auth };
