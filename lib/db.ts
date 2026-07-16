@@ -1,17 +1,13 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-// Build වෙද්දී Database එකට connect වෙන්න හදන්න එපා
-let db: any;
+// Build වෙලාවේදී error එකක් නොවෙන්න DATABASE_URL එක check කරන්න
+const connectionString = process.env.DATABASE_URL!;
 
-if (process.env.NODE_ENV === 'production') {
-    // Production වලදී විතරක් DB එක හදන්න
-    const client = postgres(process.env.DATABASE_URL!, { ssl: 'require' });
-    db = drizzle(client);
-} else {
-    // Local development වලදී විතරක් DB එක හදන්න
-    const client = postgres(process.env.DATABASE_URL!);
-    db = drizzle(client);
-}
+// Production වලදී SSL අනිවාර්යයි, Local වලදී අවශ්‍ය නැහැ.
+// Neon වලදී SSL දාන එක ඕනෑම වෙලාවක ආරක්ෂිතයි.
+const client = postgres(connectionString, { 
+  ssl: process.env.NODE_ENV === 'production' ? 'require' : false 
+});
 
-export { db };
+export const db = drizzle(client);
